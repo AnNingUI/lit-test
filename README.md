@@ -1,7 +1,7 @@
 # lit-test
 
 <p align="center">
-    English | <a herf="./README.zh.md">简体中文</a>
+    <span> English </span> | <a href="./README.zh.md"> 简体中文 </a>
 </p>
 
 ## What is this

@@ -1,7 +1,7 @@
 # Signal实现在lit中的比较
 
 <p align="center">
-    <a herf="./README.md">English</a> | 简体中文
+    <a href="./README.md"> English </a> | <span> 简体中文 </span>
 </p>
 
 ## 使用成本(心智负担)

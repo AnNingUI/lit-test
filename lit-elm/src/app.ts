@@ -1,13 +1,11 @@
 // app.ts
 
-import { ref } from "lit-html/directives/ref.js";
 import { Counter } from "./counter";
 import { httpRequest } from "./effects";
 import { html } from "./html";
 import { run } from "./runtime";
 import { type Effect, type Model, type Msg, type Subscription } from "./types";
 
-ref;
 // --- 1. Model (状态) ---
 /**
  * @interface AppModel
