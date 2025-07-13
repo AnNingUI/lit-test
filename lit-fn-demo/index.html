@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lit-fn Demo</title>
+  <script type="module" src="/src/main.ts">
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #e2e8f0;
+    }
+
+    app-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    /* 路由挂载点全宽显示 */
+    #outlet {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <app-main>
+    <app-header title="Lit-fn Demos"></app-header>
+    <div id="app"></div>
+  </app-main>
+</body>
+
+</html>

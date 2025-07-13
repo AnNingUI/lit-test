@@ -1,0 +1,28 @@
+{
+	"name": "lit-fn-demo",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@lit-labs/signals": "^0.1.2",
+		"@vaadin/router": "^2.0.0",
+		"canvas-confetti": "^1.9.3",
+		"dompurify": "^3.2.5",
+		"highlight.js": "^11.11.1",
+		"lit": "^3.3.0",
+		"lit-fn": "^0.2.3",
+		"lit-fn-demo": "file:",
+		"marked": "^15.0.11",
+		"marked-highlight": "^2.2.1"
+	},
+	"devDependencies": {
+		"@types/canvas-confetti": "^1.9.0",
+		"typescript": "~5.8.3",
+		"vite": "^6.3.5"
+	}
+}
