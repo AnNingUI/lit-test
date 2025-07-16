@@ -12,7 +12,7 @@ This is my learning repository and experimental implementations for the frontend
 This project demonstrates how to use lit-fn to write React-like functional components in Lit.
 
 **lit-fn-easy**
-This project demonstrates how to use alien-signals to simply implement a functional component and its reactive handling.
+This project demonstrates how to use alien-signals add fast-memoize to simply implement a functional component and its reactive handling.
 
 **lit-fn-solid**
 This project demonstrates how to convert Lit components into Solid components.
@@ -31,6 +31,7 @@ Implements a functional component writing style based on alien-signals following
 - [Solid](https://www.solidjs.com/)
 - [React](https://reactjs.org/)
 - [Elm](https://elm-lang.org/)
+- [fast-memoize](https://github.com/caiogondim/fast-memoize.js)
 - [alien-signals](https://github.com/stackblitz/alien-signals)
 - [@lit-labs/signals](https://www.npmjs.com/package/@lit-labs/signals)
 - [@xignal/lit](https://github.com/flamrdevs/xignal/tree/main/packages/xignal-lit)

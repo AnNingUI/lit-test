@@ -11,7 +11,7 @@
 **lit-fn-demo**
 这个项目演示了如何使用lit-fn在lit中编写类似React的函数式组件。
 **lit-fn-easy**
-这个项目演示了如何使用alien-signals简单实现一个函数组件以及对应响应式处理
+这个项目演示了如何使用alien-signals和fast-memoize简单实现一个函数组件以及对应响应式处理
 **lit-fn-soild**
 这个项目演示了如何将lit组件转换成solid组件
 **lit-with-signal**
@@ -28,6 +28,7 @@
 - [Solid](https://www.solidjs.com/)
 - [React](https://reactjs.org/)
 - [Elm](https://elm-lang.org/)
+- [fast-memoize](https://github.com/caiogondim/fast-memoize.js)
 - [alien-signals](https://github.com/stackblitz/alien-signals)
 - [@lit-labs/signals](https://www.npmjs.com/package/@lit-labs/signals)
 - [@xignal/lit](https://github.com/flamrdevs/xignal/tree/main/packages/xignal-lit)

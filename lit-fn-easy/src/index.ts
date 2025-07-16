@@ -1,36 +1,45 @@
-import { computed, signal } from "alien-signals";
-import { css, html } from "lit";
-import { onMounted, onUnmounted, render, useCss } from "./_index";
-const count = signal(0);
+import {
+	$mount,
+	clearCtx,
+	computed,
+	createRef,
+	getOrPushCtx,
+	h,
+	nothing,
+	onMounted,
+	onUnmounted,
+	raw,
+	ref,
+	state,
+	u,
+} from "./runtime";
+const count = state(0);
 const doubled = computed(() => count() * 2);
 function CounterText() {
-	return () => html`
+	return raw`
 		<div>
-			<p>The count is ${count()}</p>
-			<p>The doubled count is ${doubled()}</p>
+			<p>The count is ${count}</p>
+			<p>The doubled count is ${doubled}</p>
 			<slot></slot>
 		</div>
 	`;
 }
 
-const Counter = (props: { initValue?: number }) => {
-	useCss(css`
-		:host {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-		}
-		button {
-			margin: 0.5rem;
-			padding: 0.5rem;
-			font-size: 1.2rem;
-			background-color: #4caf50;
-			color: white;
-			border: none;
-			border-radius: 0.2rem;
-		}
-	`);
-	return () => html`
+function Counter(props: { initValue?: number }) {
+	u.css`
+	:host {
+		display: block;
+	}
+	button {
+		background-color: #6200ea;
+		color: white;
+		border: none;
+		padding: 8px 16px;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+	`;
+	return raw`
 		<button
 			@click=${() => {
 				count(count() + 1 + (props?.initValue ?? 0));
@@ -38,42 +47,178 @@ const Counter = (props: { initValue?: number }) => {
 		>
 			Increment
 		</button>
-		<fn-component .component=${CounterText}></fn-component>
+		<f-c .c=${CounterText}></f-c>
+		${u.next}
 	`;
-};
+}
 
-const inlineCounter = () => {
-	const inlineCount = signal(0);
+function inlineCounter() {
+	const inlineCount = getOrPushCtx("inlineCount", () => 0);
 	onMounted(() => {
 		console.log("inlineCounter mounted");
 	});
 	onUnmounted(() => {
 		console.log("inlineCounter unmounted");
 	});
-	return () => html`
+	return raw`
 		<button
 			@click=${() => {
 				inlineCount(inlineCount() + 1);
 			}}
 		>
-			Inline Counter: ${inlineCount()}
+			Inline Counter: ${inlineCount}
+		</button>
+		<button @click=${() => {
+			inlineCount(0);
+			clearCtx();
+		}}>
+			rest
 		</button>
 	`;
+}
+
+interface Todo {
+	id: number;
+	text: string;
+	done: boolean;
+}
+const id = {
+	v: 0,
 };
-
-const App = () => {
-	const isLoad = signal(true);
-
-	return () => html`
-		<fn-component
-			.component=${Counter}
-			.props=${{ initValue: 10 }}
-		></fn-component>
-		<fn-component .component=${inlineCounter}></fn-component>
-		<button @click=${() => isLoad(!isLoad())}>Toggle Component</button>
-		${isLoad()
-			? html`<fn-component .component=${inlineCounter}></fn-component>`
-			: ""}
+const todoItem = state<Todo[]>([
+	{
+		id: id.v++,
+		text: "Learn Lit",
+		done: false,
+	},
+]);
+const addTodo = (value?: string) => {
+	if (!value) return false;
+	todoItem([...todoItem(), { id: id.v++, text: value, done: false }]);
+	return true;
+};
+const deleteTodo = (id: number) => {
+	todoItem(todoItem().filter((t) => t.id !== id));
+};
+function ForTodo() {
+	const inputRef = createRef<HTMLInputElement>();
+	u.css`
+	.todo-item {
+		animation: fade-in .5s ease-in-out;
+	}
+	.todo-item-remove {
+		animation: fade-out .5s ease-in-out;
+	}
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+			background-color: #f00;
+			transform: scale(0.8);
+		}
+		to {
+			opacity: 1;
+			background-color: #fff;
+			transform: scale(1);
+		}	
+	}
+	@keyframes fade-out {
+		from {
+			opacity: 1;
+			background-color: #fff;
+			transform: scale(1);
+		}
+		to {
+			opacity: 0;
+			background-color: #f00;
+			transform: scale(0.8);
+		}
+	}
 	`;
-};
-render(App, document.body);
+
+	return raw`
+		<div> 
+			<input type="text" placeholder="Add Todo" ${ref(inputRef)} />
+			<button @click=${() => {
+				if (!addTodo(inputRef.value?.value)) return;
+				inputRef.value!.value = "";
+			}}>Add</button>
+			<button @click=${() => {
+				for (let i = 0; i < 1000; i++) {
+					setTimeout(() => {
+						requestAnimationFrame(() => {
+							addTodo(`Todo ${i}`);
+						});
+					}, 15 * i);
+				}
+			}}>For Render 1000 Items</button>
+			<button @click=${() => {
+				for (let i = 0; i < 1000; i++) {
+					setTimeout(() => {
+						requestAnimationFrame(() => {
+							const items = todoItem();
+							if (i < items.length) {
+								todoItem(items.slice(0, items.length - i));
+							}
+						});
+					}, 20 * i);
+				}
+			}}>Del Render 1000 Items</button>
+			<ul>
+				
+				<lit-for 
+					.in=${false}
+					.items=${todoItem} 
+					.handler=${(item: Todo) => raw`
+						<animation-loader 
+							.outer=${{
+								className: "todo-item-remove",
+								time: 500,
+								inner: true,
+							}}
+							date-key-index=${item.id}
+						>
+							<li class="todo-item">
+									<span>${item.text}</span>
+									<button @click=${() => {
+										deleteTodo(item.id);
+									}}>Delete</button>
+							</li>
+						</animation-loader>
+					`}
+				></lit-for>
+			</ul>
+		</div>
+	`;
+}
+
+function App() {
+	const isLoad = state(true);
+	function LoadTemp() {
+		return isLoad() ? raw`<f-c .c=${inlineCounter}></f-c>` : nothing;
+	}
+	const num = state(0);
+	return raw`
+		<!-- <f-c
+			.c=${Counter}
+			.p=${{ initValue: 10 }}
+		></f-c> -->
+		${h({
+			c: Counter,
+			p: { initValue: 10 },
+			n: () => raw`
+				<p> ${num} </p>
+				<p> this is next in Counter f-c </p>
+			`,
+		})}
+		<f-c .c=${ForTodo}></f-c>
+		<f-c .c=${inlineCounter}></f-c>
+		<button @click=${() => isLoad(!isLoad())}>Toggle Component</button>
+		<button @click=${() => {
+			num(num() + 1);
+		}}>num++</button>
+		<lit-if 
+			.handler=${LoadTemp}
+		></lit-if>
+	`;
+}
+$mount(App, document.body);
