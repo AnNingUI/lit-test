@@ -4,6 +4,7 @@ import {
 	computed,
 	createRef,
 	getOrPushCtx,
+	getPrevSibling,
 	h,
 	nothing,
 	onMounted,
@@ -26,6 +27,7 @@ function CounterText() {
 }
 
 function Counter(props: { initValue?: number }) {
+	// useCss(css``)
 	u.css`
 	:host {
 		display: block;
@@ -53,6 +55,7 @@ function Counter(props: { initValue?: number }) {
 }
 
 function inlineCounter() {
+	console.log(getPrevSibling());
 	const inlineCount = getOrPushCtx("inlineCount", () => 0);
 	onMounted(() => {
 		console.log("inlineCounter mounted");
@@ -85,21 +88,50 @@ interface Todo {
 const id = {
 	v: 0,
 };
-const todoItem = state<Todo[]>([
+const todoItem = state([
 	{
 		id: id.v++,
 		text: "Learn Lit",
 		done: false,
 	},
-]);
+] as Todo[]);
+
 const addTodo = (value?: string) => {
 	if (!value) return false;
 	todoItem([...todoItem(), { id: id.v++, text: value, done: false }]);
 	return true;
 };
 const deleteTodo = (id: number) => {
-	todoItem(todoItem().filter((t) => t.id !== id));
+	todoItem(todoItem().flatMap((item) => (item.id === id ? [] : [item])));
 };
+
+const TodoItem = todoItem.repeat(
+	(item) => item.id,
+	(item) =>
+		raw`
+			<animation-loader
+				.key=${item.id}
+				.outer=${{
+					className: "todo-item-remove",
+					time: 500,
+					inner: true,
+				}}
+				date-key-index=${item.id}
+			>
+				<li class="todo-item">
+					<span>${item.text}</span>
+					<button
+						@click=${() => {
+							deleteTodo(item.id);
+						}}
+					>
+						Delete
+					</button>
+				</li>
+			</animation-loader>
+	`
+);
+
 function ForTodo() {
 	const inputRef = createRef<HTMLInputElement>();
 	u.css`
@@ -143,7 +175,7 @@ function ForTodo() {
 				inputRef.value!.value = "";
 			}}>Add</button>
 			<button @click=${() => {
-				for (let i = 0; i < 1000; i++) {
+				for (let i = 0; i < 10; i++) {
 					setTimeout(() => {
 						requestAnimationFrame(() => {
 							addTodo(`Todo ${i}`);
@@ -152,7 +184,7 @@ function ForTodo() {
 				}
 			}}>For Render 1000 Items</button>
 			<button @click=${() => {
-				for (let i = 0; i < 1000; i++) {
+				for (let i = 0; i < 10; i++) {
 					setTimeout(() => {
 						requestAnimationFrame(() => {
 							const items = todoItem();
@@ -164,28 +196,7 @@ function ForTodo() {
 				}
 			}}>Del Render 1000 Items</button>
 			<ul>
-				
-				<lit-for 
-					.in=${false}
-					.items=${todoItem} 
-					.handler=${(item: Todo) => raw`
-						<animation-loader 
-							.outer=${{
-								className: "todo-item-remove",
-								time: 500,
-								inner: true,
-							}}
-							date-key-index=${item.id}
-						>
-							<li class="todo-item">
-									<span>${item.text}</span>
-									<button @click=${() => {
-										deleteTodo(item.id);
-									}}>Delete</button>
-							</li>
-						</animation-loader>
-					`}
-				></lit-for>
+				${TodoItem}
 			</ul>
 		</div>
 	`;
@@ -198,10 +209,6 @@ function App() {
 	}
 	const num = state(0);
 	return raw`
-		<!-- <f-c
-			.c=${Counter}
-			.p=${{ initValue: 10 }}
-		></f-c> -->
 		${h({
 			c: Counter,
 			p: { initValue: 10 },

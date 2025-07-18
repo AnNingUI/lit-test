@@ -117,3 +117,27 @@ export const Result = {
 	Err: (message: string | LitNothing) =>
 		ResultBuilder("Err", { message }) as ResultCase<"Err", string>,
 };
+
+function test() {
+	const okOrErr = () =>
+		Math.random() > 0.5 ? Result.Ok(1) : Result.Err("Error");
+
+	console.log(okOrErr().isErr());
+	console.log(okOrErr().isOk());
+
+	const matchResult = match(okOrErr(), {
+		Ok: ({ value }) => `Got value: ${value}`,
+		Err: ({ message }) => `Got error: ` + message.toString(),
+	});
+
+	const matchLazyResult = matchLazy(okOrErr, {
+		Ok: ({ value }) => `Got value: ${value}`,
+		Err: ({ message }) => `Got error: ` + message.toString(),
+	});
+
+	return { matchResult, matchLazyResult };
+}
+
+const { matchResult, matchLazyResult } = test();
+console.log(matchResult);
+console.log(matchLazyResult());

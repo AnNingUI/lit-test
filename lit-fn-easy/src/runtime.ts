@@ -12,7 +12,9 @@ import {
 	type TemplateResult,
 } from "lit";
 import { state as litState, property } from "lit/decorators.js";
+import type { ItemTemplate, KeyFn } from "lit/directives/repeat.js";
 import type { MatchLazy } from "./enuml";
+import { repeat } from "./lit.mod";
 export * from "./lit.mod";
 export type Temp =
 	| TemplateResult
@@ -21,11 +23,20 @@ export type Temp =
 	| TemplateResult<3>
 	| string;
 
-const nowFnComponent = {
+export const nowFnComponent = {
+	prev: null as unknown as HTMLElement,
 	value: null as unknown as FnComponent<unknown>,
 };
 export function getCurrentFnComponent() {
 	return nowFnComponent.value;
+}
+
+export function getPrevSibling() {
+	return nowFnComponent.prev;
+}
+
+export function getParentElement(el?: Element) {
+	return el?.parentElement;
 }
 
 function reactiveRender(fn: () => () => Temp, container: Element) {
@@ -43,15 +54,84 @@ export function onUnmounted(fn: () => void) {
 	nowFnComponent.value.addOnUnmount(fn);
 }
 
-interface State<T> {
+type InRepeatDirectiveFn<T> = T extends Iterable<infer K>
+	? {
+			(
+				keyFnOrTemplate: KeyFn<K> | ItemTemplate<K>,
+				template?: ItemTemplate<K>
+			): () => unknown;
+			(template: ItemTemplate<T>): () => unknown;
+			(
+				keyFn: KeyFn<T> | ItemTemplate<T>,
+				template: ItemTemplate<T>
+			): () => unknown;
+	  }
+	: never;
+
+export type HasMap<T> = T extends Iterable<infer K>
+	? {
+			map<U>(
+				callbackfn: (value: K, index: number, array: T) => U,
+				thisArg?: any
+			): U[];
+	  }
+	: {};
+
+type State<T> = {
 	(): T;
 	(value: T): void;
-}
+} & HasMap<T> & {
+		repeat: InRepeatDirectiveFn<T>;
+	};
 
-export function state<T>(initialValue: T) {
+export function state<T>(initialValue: T): State<T> {
 	const s = signal(initialValue);
 	(s as any).$__LIT_FN_IF_STATE__ = true;
-	return s;
+	if (Array.isArray(initialValue)) {
+		const rep = (
+			keyFnOrTemplate: KeyFn<T> | ItemTemplate<T>,
+			template?: ItemTemplate<T>
+		) => {
+			const _rep = () => {
+				return repeat(s() as [], keyFnOrTemplate, template);
+			};
+			(_rep as any).$__LIT_FN_REPEAT__$ = true;
+			return _rep;
+		};
+		(s as any).repeat = rep;
+		const map = <R>(h: (v: T, index: number, arr: T[]) => R) => {
+			const _map = () =>
+				(s() as HasMap<Array<any>>).map((v, idx, arr) => {
+					const _ = h(v as T, idx, arr as T[]);
+					if (isRaw(_)) return _();
+					if (isLitHtml(_)) return _;
+					return _;
+				});
+			_map.$__LIT_FN_MAP__$ = true;
+			return _map;
+		};
+		(s as any).map = map;
+	}
+	return s as State<T>;
+}
+
+export function isMapFn(value: any) {
+	return typeof value === "function" && value?.$__LIT_FN_MAP__$ === true;
+}
+
+export function isRepFn(value: any) {
+	return typeof value === "function" && value?.$__LIT_FN_REPEAT__$ === true;
+}
+
+export function isRaw(value: any): value is () => Temp {
+	return (
+		typeof value === "function" &&
+		typeof (value as any).$__lit_fn_run__ === "function"
+	);
+}
+
+export function isLitHtml(value: any): value is TemplateResult {
+	return typeof value === "object" && (value as any)._$litType$;
 }
 
 export function pushCtx<R>(statePush: (ctx: Record<string, any>) => R | void) {
@@ -125,6 +205,12 @@ const _rStr = memoize(
 						</fn-component>
 					`;
 					}
+					if (isMapFn(v)) {
+						return v();
+					}
+					if (isRepFn(v)) {
+						return v();
+					}
 					if (isNext(v)) {
 						const r = v?.value?.() ?? "";
 						if (typeof r === "function") {
@@ -152,10 +238,19 @@ const _rStr = memoize(
 		}
 );
 
-export const raw: (
-	strings: TemplateStringsArray,
-	...values: unknown[]
-) => () => TemplateResult<1> = _rStr<TemplateResult<1>>(litHtml);
+interface Raw {
+	(
+		strings: TemplateStringsArray,
+		...values: unknown[]
+	): () => TemplateResult<1>;
+	html(strings: TemplateStringsArray, ...values: unknown[]): TemplateResult<1>;
+}
+
+export const raw: Raw = (() => {
+	const r: Raw = _rStr<TemplateResult<1>>(litHtml) as unknown as Raw;
+	r.html = litHtml;
+	return r;
+})();
 
 export const r: {
 	html(
@@ -246,9 +341,16 @@ export class FnComponent<T> extends LitElement {
 		attribute: "props",
 	})
 	props!: T;
+
 	addOnUnmount(fn: () => void) {
 		this.#unmountFns.push(fn);
 	}
+
+	connectedCallback(): void {
+		super.connectedCallback();
+		nowFnComponent.prev = this.previousElementSibling as HTMLElement;
+	}
+
 	disconnectedCallback(): void {
 		super.disconnectedCallback();
 		FnComponent.num--;
@@ -326,176 +428,52 @@ export class LitIf extends LitElement {
 }
 customElements.define("lit-if", LitIf);
 
-type GetterArray<T> = () => T[];
-export class LitFor<T> extends LitElement {
-	@property({
-		type: Array,
-		attribute: "items",
-	})
-	items!: T[] | GetterArray<T> | State<T[]>;
-
-	@property({
-		type: Object,
-		attribute: "handler",
-	})
-	handler!: (
-		item: T,
-		index: number,
-		selfs: {
-			items: T[];
-			el: (get: (root: HTMLElement) => HTMLElement) => HTMLElement;
-		}
-	) => Temp | (() => Temp);
-
-	@property({
-		type: Boolean,
-		attribute: "in",
-	})
-	in = true;
-
-	@property({
-		type: Boolean,
-		attribute: "isStatic",
-	})
-	isStatic = false;
-
-	#cache: Temp[] = [];
-
-	#run() {
-		const items =
-			(typeof this.items === "function" ? this.items() : this.items) || [];
-		const get = () =>
-			items.map((it, idx) => {
-				const result = this.handler(it, idx, {
-					items,
-					el: (get) => {
-						const root = this.renderRoot as HTMLElement;
-						return get(root);
-					},
-				});
-				if (typeof result === "function") {
-					return result();
-				} else {
-					return result;
-				}
-			});
-
-		if (this.isStatic) {
-			if (this.#cache.length > 0) {
-				return this.#cache;
-			} else {
-				this.#cache = get();
-				return this.#cache;
-			}
-		}
-
-		return get();
-	}
-
-	protected createRenderRoot() {
-		return !this.in ? (this.parentNode! as HTMLElement) : this;
-	}
-
-	#hasRunEffect = false;
-
-	render() {
-		const temp = this.#run();
-		if (this.#hasRunEffect === false) {
-			effect(this.#run);
-			this.#hasRunEffect = true;
-		}
-		return temp;
-	}
-}
-customElements.define("lit-for", LitFor);
-
 /**
  * Must Only one firstChildInSlot
  * @element animation-loader
  */
 export class AnimationLoader extends LitElement {
-	@property({ type: Object, attribute: "enter" })
-	enter = { className: "", inner: false };
-
 	@property({ type: Object, attribute: "outer" })
-	outer = { className: "", time: 2000, inner: false };
+	outer = { className: "", time: 0 };
 
-	#OuterTimer!: number;
+	static #nowId = 0;
 
 	html(strings: TemplateStringsArray, ...values: unknown[]): TemplateResult<1> {
 		return litHtml(strings, ...values);
-	}
-
-	get #firstChildInSlot() {
-		const slot = this.firstElementChild as HTMLSlotElement;
-		return slot;
-	}
-
-	get #enterEl() {
-		const enter = this.enter ?? {};
-		if (enter.inner) {
-			return this.#firstChildInSlot as HTMLElement;
-		}
-		return this as HTMLElement;
-	}
-
-	get #outerEl() {
-		const outer = this.outer ?? {};
-		if (outer.inner) {
-			const el = this.#firstChildInSlot as HTMLElement;
-			return el;
-		}
-		return this as HTMLElement;
-	}
-
-	remove() {
-		const self = this;
-		const newRemove = () => {
-			const parent = self.parentNode;
-			if (parent) {
-				parent.removeChild(self);
-			}
-		};
-		if (self.outer.className) {
-			const outer = self.outer;
-			const enter = self.enter ?? {};
-			// const
-
-			enter?.className && self.#enterEl.classList.remove(self.enter.className);
-			self.#outerEl.classList.add(outer.className);
-			if (outer.time) {
-				requestAnimationFrame(() => {
-					requestAnimationFrame(() => {
-						self.#OuterTimer = setTimeout(() => {
-							self.#outerEl.classList.remove(outer.className);
-							newRemove();
-							clearTimeout(self.#OuterTimer);
-						}, outer.time + 0.01);
-					});
-				});
-			} else {
-				newRemove();
-			}
-		} else {
-			newRemove();
-		}
 	}
 
 	protected createRenderRoot(): HTMLElement | DocumentFragment {
 		return this;
 	}
 
-	connectedCallback(): void {
-		super.connectedCallback();
-		if (this.enter.className) {
-			this.classList.add(this.enter.className);
-		}
+	disconnectedCallback(): void {
+		super.disconnectedCallback();
+		AnimationLoader.#nowId--;
 	}
 
 	render() {
-		return this.html`
-			<slot></slot>
-		`;
+		const child = this.firstElementChild;
+		const self = this;
+		const outer = this.outer;
+		const remove = () => {
+			this.parentElement?.removeChild(self);
+		};
+
+		if (child) {
+			this.remove = function () {
+				if (outer.className) {
+					child.classList.add(outer.className);
+					setTimeout(() => {
+						child.classList.remove(outer.className);
+						remove();
+					}, outer.time);
+				} else {
+					remove();
+				}
+			};
+		}
+
+		return child;
 	}
 }
 
