@@ -436,6 +436,9 @@ export class AnimationLoader extends LitElement {
 	@property({ type: Object, attribute: "outer" })
 	outer = { className: "", time: 0 };
 
+	@property({ type: Boolean, attribute: "is-all" })
+	isAll = false;
+
 	static #nowId = 0;
 
 	html(strings: TemplateStringsArray, ...values: unknown[]): TemplateResult<1> {
@@ -451,8 +454,29 @@ export class AnimationLoader extends LitElement {
 		AnimationLoader.#nowId--;
 	}
 
+	private targetForEach(
+		target: HTMLCollection | HTMLElement[],
+		handler: (el: HTMLElement) => void
+	) {
+		if (Array.isArray(target)) {
+			target.forEach(handler);
+		} else if (target instanceof HTMLCollection) {
+			for (let i = 0; i < target.length; i++) {
+				handler(target[i] as HTMLElement);
+			}
+		}
+	}
+
+	private get targetElement() {
+		if (this.isAll) {
+			return this.children;
+		} else {
+			return [this.firstElementChild] as HTMLElement[];
+		}
+	}
+
 	render() {
-		const child = this.firstElementChild;
+		const child = this.targetElement;
 		const self = this;
 		const outer = this.outer;
 		const remove = () => {
@@ -462,9 +486,14 @@ export class AnimationLoader extends LitElement {
 		if (child) {
 			this.remove = function () {
 				if (outer.className) {
-					child.classList.add(outer.className);
+					// child.classList.add(outer.className);
+					this.targetForEach(child, (el) => {
+						el.classList.add(outer.className);
+					});
 					setTimeout(() => {
-						child.classList.remove(outer.className);
+						this.targetForEach(child, (el) => {
+							el.classList.remove(outer.className);
+						});
 						remove();
 					}, outer.time);
 				} else {

@@ -2,6 +2,8 @@
 
 import { type TemplateResult } from "lit-html";
 
+export type Nil = null | undefined;
+export type nil = Nil;
 /**
  * 通用模型类型。所有应用状态都应符合此接口或其扩展。
  */

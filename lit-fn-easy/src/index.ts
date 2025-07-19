@@ -108,7 +108,7 @@ const deleteTodo = (id: number) => {
 const TodoItem = todoItem.repeat(
 	(item) => item.id,
 	(item) =>
-		raw`
+		raw.html`
 			<animation-loader
 				.key=${item.id}
 				.outer=${{

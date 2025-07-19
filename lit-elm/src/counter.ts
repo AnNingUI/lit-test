@@ -14,7 +14,6 @@ export type ChildMsg = { type: "Increment" } | { type: "Decrement" };
 export const childInitialModel: ChildModel = {
 	count: 0,
 };
-
 // 子组件的更新逻辑
 export function childUpdate(
 	msg: ChildMsg,

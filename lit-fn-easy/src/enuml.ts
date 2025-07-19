@@ -92,14 +92,17 @@ type ResultCase<Type extends "Ok" | "Err", Value> = Case<
 		isErr(): true;
 	};
 };
+
+const ResultBaseType = enuml<{
+	Ok: { value: unknown };
+	Err: { message: LitNothing };
+}>();
+
 const ResultBuilder = <Type extends "Ok" | "Err", Value>(
 	type: Type,
 	payload: any
 ): ResultCase<Type, Value> => {
-	const base = enuml<{
-		Ok: { value: Value };
-		Err: { message: LitNothing };
-	}>()(type, payload) as ResultCase<Type, Value>;
+	const base = ResultBaseType(type, payload) as ResultCase<Type, Value>;
 	const result = Object.assign(base, {
 		isOk(): this is ResultCase<"Ok", Value> {
 			return type === "Ok";
